@@ -12,19 +12,18 @@ typedef struct{
     uint8_t board[19][19];
 } Board;
 
-uint8_t in_bounds(uint8_t x, uint8_t y){
+bool in_bounds(uint8_t x, uint8_t y){
     return 0 <= x && x < 19 && 0 <= y && y < 19;
+}
+
+void board_reset_prisoners(Board *B){
+    B->black_prisoners = B->white_prisoners = 0;
 }
 
 void board_fill_empty(Board *B){
     for (int k = 0; k < 361; ++k){
         B->board[k/19%19][k%19] = empty;
     }
-}
-
-void board_reset_prisoners(Board *B){
-    B->black_prisoners = 0;
-    B->white_prisoners = 0;
 }
 
 void board_clean_flags(Board *B){ // All cells cast to .#OX
@@ -45,15 +44,15 @@ void board_remove_group(Board *B, uint8_t x, uint8_t y){
     for (int k = 0; k < 361; ++k){
         current_cell = &B->board[k/19%19][k%19];
         if ((*current_cell & 4) != 0){
-            B->white_prisoners += (*current_cell & 3) == black;
             B->black_prisoners += (*current_cell & 3) == white;
+            B->white_prisoners += (*current_cell & 3) == black;
             *current_cell = empty;
         }
     }
 }
 
 bool board_has_liberty(Board *B, uint8_t x, uint8_t y){
-    uint8_t check_cell, current_cell_color = B->board[y][x] & 3;
+    uint8_t check_cell, current_cell_color = B->board[y][x] & 3; // check_cell uninitialized
     if (current_cell_color == empty) return true;
     B->board[y][x] |= 4;
     int x_off, y_off;
