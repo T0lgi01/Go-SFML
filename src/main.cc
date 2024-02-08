@@ -18,7 +18,7 @@ uint8_t in_bounds(uint8_t x, uint8_t y){
 
 void board_fill_empty(Board *B){
     for (int k = 0; k < 361; ++k){
-        B->board[(k/19)%19][k%19] = empty;
+        B->board[k/19%19][k%19] = empty;
     }
 }
 
@@ -29,31 +29,21 @@ void board_reset_prisoners(Board *B){
 
 void board_clean_flags(Board *B){ // All cells cast to .#OX
     for (int k = 0; k < 361; ++k){
-        B->board[(k/19)%19][k%19] &= 3;
+        B->board[k/19%19][k%19] &= 3;
     }
 }
 
 void board_print(Board *B){
-    int which_char;
     for (int k = 0; k < 361; ++k){
-        which_char = B->board[(k/19)%19][k%19];
-        which_char += (which_char == empty && k%6 == 0 && k%19%6 == 3) << 2;
-        fputc(".#OX*"[which_char], stdout);
-        fputc(" \n"[k%19 == 18], stdout);
+        printf("%c%c", ".#OX*#OX"[B->board[k/19%19][k%19] & 3 + ((k%6 == 0 && k%19%6 == 3) << 2)], " \n"[k%19 == 18]);
     }
     printf("Prisoners. B: %i, W: %i\n", B->black_prisoners, B->white_prisoners);
 }
 
-// Currently unused
-void board_write(Board *B, uint8_t x, uint8_t y, enum cellstate color){
-    assert(in_bounds(x, y));
-    B->board[y][x] = color;
-}
-
 void board_remove_group(Board *B, uint8_t x, uint8_t y){
     uint8_t *current_cell;
-    for (int k = 0; k < 361; k++){
-        current_cell = &B->board[(k/19)%19][k%19];
+    for (int k = 0; k < 361; ++k){
+        current_cell = &B->board[k/19%19][k%19];
         if ((*current_cell & 4) != 0){
             B->white_prisoners += (*current_cell & 3) == black;
             B->black_prisoners += (*current_cell & 3) == white;
@@ -67,7 +57,7 @@ bool board_has_liberty(Board *B, uint8_t x, uint8_t y){
     if (current_cell_color == empty) return true;
     B->board[y][x] |= 4;
     int x_off, y_off;
-    for (int k = 0; k < 4; k++){
+    for (int k = 0; k < 4; ++k){
         x_off = x + ( ((k&1)-1) & (1-(k&2))); // 1, 0, -1,  0
         y_off = y + (~((k&1)-1) & (1-(k&2))); // 0, 1,  0, -1
         if (in_bounds(x_off, y_off)){
@@ -95,7 +85,7 @@ bool board_play_move(Board *B, uint8_t x, uint8_t y, cellstate color){
     // Check if the tentatively placed stone kills a group
     bool is_kill = false;
     int x_off, y_off;
-    for (int k = 0; k < 4; k++){
+    for (int k = 0; k < 4; ++k){
         x_off = x + ( ((k&1)-1) & (1-(k&2))); // 1, 0, -1,  0
         y_off = y + (~((k&1)-1) & (1-(k&2))); // 0, 1,  0, -1
         if (in_bounds(x_off, y_off)){
