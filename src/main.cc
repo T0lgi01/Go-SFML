@@ -16,7 +16,7 @@ uint8_t in_bounds(uint8_t x, uint8_t y){
     return 0 <= x && x < 19 && 0 <= y && y < 19;
 }
 
-void board_default_fill(Board *B){
+void board_fill_empty(Board *B){
     for (int k = 0; k < 361; ++k){
         B->board[(k/19)%19][k%19] = empty;
     }
@@ -43,22 +43,20 @@ void board_print(Board *B){
     }
     printf("Prisoners. B: %i, W: %i\n", B->black_prisoners, B->white_prisoners);
 }
-
+// Currently unused
 void board_write(Board *B, uint8_t x, uint8_t y, enum cellstate color){
     assert(in_bounds(x, y));
     B->board[y][x] = color;
 }
 
 void board_remove_group(Board *B, uint8_t x, uint8_t y){
+    uint8_t *current_cell;
     for (int k = 0; k < 361; k++){
-        if ((B->board[(k/19)%19][k%19] & 4) != 0){
-            if ((B->board[(k/19)%19][k%19] & 3) == black){
-                B->white_prisoners += 1;
-            }
-            if ((B->board[(k/19)%19][k%19] & 3) == white){
-                B->black_prisoners += 1;
-            }
-            B->board[(k/19)%19][k%19] = empty;
+        current_cell = &B->board[(k/19)%19][k%19];
+        if ((*current_cell & 4) != 0){
+            B->white_prisoners += (*current_cell & 3) == black;
+            B->black_prisoners += (*current_cell & 3) == white;
+            *current_cell = empty;
         }
     }
 }
@@ -71,13 +69,13 @@ uint8_t board_has_liberty(Board *B, uint8_t x, uint8_t y){
     int x_off;
     int y_off;
     for (int k = 0; k < 4; k++){
-        x_off = x + ( ((k&1)-1) & (1-(k&2)));
-        y_off = y + (~((k&1)-1) & (1-(k&2)));
+        x_off = x + ( ((k&1)-1) & (1-(k&2))); // 1, 0, -1,  0
+        y_off = y + (~((k&1)-1) & (1-(k&2))); // 0, 1,  0, -1
         if (in_bounds(x_off, y_off)){
             check_cell = B->board[y_off][x_off];
             if (check_cell == empty || 
                 check_cell == current_cell_color && board_has_liberty(B, x_off, y_off)) 
-                return 1; // && higher precendence than ||
+                return 1; // && higher precendence than || lmao
         }
     }
     return 0;
@@ -87,17 +85,18 @@ uint8_t board_play_move(Board *B, uint8_t x, uint8_t y, cellstate color){
     // Return 1 means illegal move, Return 0 means placed stone
     // Assumes Cleaned Flags
     assert(in_bounds(x, y));
-    if (B->board[y][x] != empty) {
-        if (B->board[y][x] == color)
+    uint8_t *current_cell = &B->board[y][x];
+    if (*current_cell != empty) {
+        if (*current_cell == color)
             printf("Cell of own color at %i, %i!\n", x, y);
-        if (B->board[y][x] == (color^3))
+        if (*current_cell == (color^3))
             printf("Cell of other color at %i, %i!\n", x, y);
-        if (B->board[y][x] == ko)
+        if (*current_cell == ko)
             printf("Ko cell at %i, %i!\n", x, y);
         return 1;
     }
 
-    B->board[y][x] = color;
+    *current_cell = color;
     // Check if the tentatively placed stone kills a group
     uint8_t is_kill;
     int x_off, y_off;
@@ -113,7 +112,7 @@ uint8_t board_play_move(Board *B, uint8_t x, uint8_t y, cellstate color){
     }
     if (!is_kill && !board_has_liberty(B, x, y)){
         printf("Suicide Move at %i, %i!\n", x, y);
-        B->board[y][x] = empty;
+        *current_cell = empty;
         board_clean_flags(B);
         return 1;
     }
@@ -123,18 +122,16 @@ uint8_t board_play_move(Board *B, uint8_t x, uint8_t y, cellstate color){
 }
 
 void board_play(Board *B){
-    uint8_t color = black;
     /// not done
 }
 
 int main(){
     Board B1;
-    board_default_fill(&B1);
+    board_fill_empty(&B1);
     board_reset_prisoners(&B1);
     board_play_move(&B1, 1, 0, black);
     board_play_move(&B1, 0, 0, white);
     board_play_move(&B1, 0, 1, black);
     board_print(&B1);
-    
 }
 // g++ src/main.cc -o Go && ./Go
