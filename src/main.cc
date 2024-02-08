@@ -4,7 +4,7 @@
 
 enum cellstate{empty = 0, black = 1, white = 2, ko = 3}; // .#OX
 // Idiom: other color = color^3;
-// Idiom: Corrupted Cell if (cell & 252 != 0); (denoted by "C")
+// Idiom: Corrupted Cell if (cell & 252 != 0);
 
 typedef struct{
     unsigned int black_prisoners;
@@ -38,7 +38,7 @@ void board_print(Board *B){
     for (int k = 0; k < 361; ++k){
         which_char = B->board[(k/19)%19][k%19];
         which_char += (which_char == empty && k%6 == 0 && k%19%6 == 3) << 2;
-        fputc(".#OC*"[which_char], stdout);
+        fputc(".#OX*"[which_char], stdout);
         fputc(" \n"[k%19 == 18], stdout);
     }
     printf("Prisoners. B: %i, W: %i\n", B->black_prisoners, B->white_prisoners);
