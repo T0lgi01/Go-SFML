@@ -34,20 +34,12 @@ void board_clean_flags(Board *B){ // All cells cast to .#OX
 }
 
 void board_print(Board *B){
-    uint8_t output;
+    int which_char;
     for (int k = 0; k < 361; ++k){
-        output = B->board[(k/19)%19][k%19];
-        if ((k == 60  || k == 66  || k == 72  ||
-             k == 174 || k == 180 || k == 186 ||
-             k == 288 || k == 294 || k == 300) && 
-                 output == empty) printf("*");        
-        else if (output == empty) printf(".");
-        if (output == black) printf("#");
-        if (output == white) printf("O");
-        if (output == ko)    printf("X");
-        if ((output & 252) != 0) printf("C"); // Corrupted
-        printf(" ");
-        if (k%19 == 18) printf("\n");
+        which_char = B->board[(k/19)%19][k%19];
+        which_char += (which_char == empty && k%6 == 0 && k%19%6 == 3) << 2;
+        fputc(".#OC*" [which_char], stdout);
+        fputc(" \n"[k%19 == 18], stdout);
     }
     printf("Prisoners. B: %i, W: %i\n", B->black_prisoners, B->white_prisoners);
 }
@@ -151,4 +143,4 @@ int main(){
     board_print(&B1);
     
 }
-// g++ main.cc -o Go && ./Go
+// g++ src/main.cc -o Go && ./Go
