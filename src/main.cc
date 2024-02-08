@@ -2,13 +2,13 @@
 #include <stdint.h>
 #include <assert.h>
 
-enum cellstate{empty = 0, black = 1, white = 2, ko = 3}; // .#OX C
+enum cellstate{empty = 0, black = 1, white = 2, ko = 3}; // .#OX
 // Idiom: other color = color^3;
-// Idiom: Corrupted Cell if (cell & 252 != 0);
+// Idiom: Corrupted Cell if (cell & 252 != 0); (denoted by "C")
 
 typedef struct{
-    uint8_t black_prisoners;
-    uint8_t white_prisoners;
+    unsigned int black_prisoners;
+    unsigned int white_prisoners;
     uint8_t board[19][19];
 } Board;
 
@@ -43,6 +43,7 @@ void board_print(Board *B){
     }
     printf("Prisoners. B: %i, W: %i\n", B->black_prisoners, B->white_prisoners);
 }
+
 // Currently unused
 void board_write(Board *B, uint8_t x, uint8_t y, enum cellstate color){
     assert(in_bounds(x, y));
@@ -61,13 +62,11 @@ void board_remove_group(Board *B, uint8_t x, uint8_t y){
     }
 }
 
-uint8_t board_has_liberty(Board *B, uint8_t x, uint8_t y){
-    uint8_t current_cell_color = B->board[y][x] & 3;
-    uint8_t check_cell;
-    if (current_cell_color == empty) return 1;
+bool board_has_liberty(Board *B, uint8_t x, uint8_t y){
+    uint8_t check_cell, current_cell_color = B->board[y][x] & 3;
+    if (current_cell_color == empty) return true;
     B->board[y][x] |= 4;
-    int x_off;
-    int y_off;
+    int x_off, y_off;
     for (int k = 0; k < 4; k++){
         x_off = x + ( ((k&1)-1) & (1-(k&2))); // 1, 0, -1,  0
         y_off = y + (~((k&1)-1) & (1-(k&2))); // 0, 1,  0, -1
@@ -75,50 +74,48 @@ uint8_t board_has_liberty(Board *B, uint8_t x, uint8_t y){
             check_cell = B->board[y_off][x_off];
             if (check_cell == empty || 
                 check_cell == current_cell_color && board_has_liberty(B, x_off, y_off)) 
-                return 1; // && higher precendence than || lmao
+                return true; // && higher precendence than || lmao
         }
     }
-    return 0;
+    return false;
 }
 
-uint8_t board_play_move(Board *B, uint8_t x, uint8_t y, cellstate color){
-    // Return 1 means illegal move, Return 0 means placed stone
-    // Assumes Cleaned Flags
+bool board_play_move(Board *B, uint8_t x, uint8_t y, cellstate color){
+    // Returns whether placement was successful
     assert(in_bounds(x, y));
     uint8_t *current_cell = &B->board[y][x];
     if (*current_cell != empty) {
-        if (*current_cell == color)
-            printf("Cell of own color at %i, %i!\n", x, y);
-        if (*current_cell == (color^3))
-            printf("Cell of other color at %i, %i!\n", x, y);
-        if (*current_cell == ko)
-            printf("Ko cell at %i, %i!\n", x, y);
-        return 1;
+        if (*current_cell == color    ) printf("Cell of own color at %i, %i!\n", x, y);
+        if (*current_cell == (color^3)) printf("Cell of other color at %i, %i!\n", x, y);
+        if (*current_cell == ko       ) printf("Ko cell at %i, %i!\n", x, y);
+        return false;
     }
 
     *current_cell = color;
     // Check if the tentatively placed stone kills a group
-    uint8_t is_kill;
+    bool is_kill = false;
     int x_off, y_off;
     for (int k = 0; k < 4; k++){
         x_off = x + ( ((k&1)-1) & (1-(k&2))); // 1, 0, -1,  0
         y_off = y + (~((k&1)-1) & (1-(k&2))); // 0, 1,  0, -1
         if (in_bounds(x_off, y_off)){
             if ((B->board[y_off][x_off]&3) == (color^3) && !board_has_liberty(B, x_off, y_off)){
-                is_kill = 1;
+                is_kill = true;
                 board_remove_group(B, x_off, y_off);
             } else board_clean_flags(B);
         }
-    }
-    if (!is_kill && !board_has_liberty(B, x, y)){
-        printf("Suicide Move at %i, %i!\n", x, y);
-        *current_cell = empty;
+    } // guaranteed clean flag
+    if (!is_kill){
+        if (!board_has_liberty(B, x, y)){
+            printf("Suicide Move at %i, %i!\n", x, y);
+            *current_cell = empty;
+            board_clean_flags(B); 
+            return false;
+        }
         board_clean_flags(B);
-        return 1;
     }
-    board_clean_flags(B);
     printf("Played Move at %i, %i.\n", x, y);
-    return 0;
+    return true;
 }
 
 void board_play(Board *B){
