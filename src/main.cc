@@ -1,6 +1,10 @@
+#include <SFML/Graphics/Rect.hpp>
+#include <SFML/Graphics/RectangleShape.hpp>
+#include <SFML/Graphics/Sprite.hpp>
 #include <stdio.h>
 #include <stdint.h>
 #include <assert.h>
+#include <SFML/Graphics.hpp>
 
 enum cellstate{empty = 0, black = 1, white = 2, ko = 3}; // .#OX
 // Idiom: other color = color^3;
@@ -111,13 +115,53 @@ void board_play(Board *B){
     /// not done
 }
 
+void board_SFML_print(Board *B){
+    /// not done
+}
+
 int main(){
     Board B1;
     board_fill_empty(&B1);
     board_reset_prisoners(&B1);
-    board_play_move(&B1, 1, 0, black);
-    board_play_move(&B1, 0, 0, white);
-    board_play_move(&B1, 0, 1, black);
-    board_print(&B1);
+    //board_play_move(&B1, 1, 0, black);
+    //board_play_move(&B1, 0, 0, white);
+    //board_play_move(&B1, 0, 1, black);
+    //board_print(&B1);
+
+    sf::RenderWindow window(sf::VideoMode(200, 200), "SFML works!");
+
+    sf::RectangleShape b(sf::Vector2f(200, 200));
+    b.setFillColor(sf::Color(0xffdb8cff));
+    b.setPosition(sf::Vector2f(0, 0));
+
+    std::vector<sf::RectangleShape> lines;
+    for (int k = 0; k < 20; ++k){
+        lines.push_back(sf::RectangleShape(sf::Vector2f(180, 1)));
+        lines.back().setPosition(sf::Vector2f(10, 10 + k * 10));
+        lines.back().setFillColor(sf::Color::Black);
+    }
+    for (int k = 0; k < 20; ++k){
+        lines.push_back(sf::RectangleShape(sf::Vector2f(1, 180)));
+        lines.back().setPosition(sf::Vector2f(10 + k * 10, 10));
+        lines.back().setFillColor(sf::Color::Black);
+    }
+
+    
+
+    while (window.isOpen())
+    {
+        sf::Event event;
+        while (window.pollEvent(event))
+        {
+            if (event.type == sf::Event::Closed)
+                window.close();
+        }
+
+        window.clear();
+        window.draw(b);
+        for (auto line : lines) window.draw(line);
+        window.display();
+    }
 }
 // g++ src/main.cc -o Go && ./Go
+// g++ -c src/main.cc && g++ main.o -o Go -lsfml-graphics -lsfml-window -lsfml-system && ./Go
