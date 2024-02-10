@@ -1,12 +1,14 @@
 #include <SFML/Graphics/Rect.hpp>
 #include <SFML/Graphics/RectangleShape.hpp>
 #include <SFML/Graphics/Sprite.hpp>
+#include <cstdint>
 #include <stdio.h>
 #include <stdint.h>
 #include <assert.h>
 #include <SFML/Graphics.hpp>
 
 enum cellstate{empty = 0, black = 1, white = 2, ko = 3}; // .#OX
+enum cellcolor{emptycolor = 0x0000000, whitecolor = 0xffffffff, blackcolor = 0x000000ff};
 // Idiom: other color = color^3;
 // Idiom: Corrupted Cell if (cell & 252 != 0);
 
@@ -115,38 +117,68 @@ void board_play(Board *B){
     /// not done
 }
 
-void board_SFML_print(Board *B){
-    /// not done
+void board_stone_color_update(Board B, std::vector<sf::CircleShape> *stones){
+    int color;
+    for (int k = 0; k < 361; ++k){
+        color = B.board[k/19%19][k%19];
+        (*stones)[k].setFillColor(sf::Color(color == white ? whitecolor : color == black ? blackcolor : emptycolor));
+    }
 }
 
 int main(){
     Board B1;
     board_fill_empty(&B1);
     board_reset_prisoners(&B1);
-    //board_play_move(&B1, 1, 0, black);
-    //board_play_move(&B1, 0, 0, white);
-    //board_play_move(&B1, 0, 1, black);
-    //board_print(&B1);
+    B1.board[2][3] = black;
+    B1.board[5][3] = white;
+    B1.board[1][3] = black;
+    B1.board[2][7] = black;
 
-    sf::RenderWindow window(sf::VideoMode(200, 200), "SFML works!");
+    constexpr uint16_t WIDTH  = 1000;
+    constexpr uint16_t HEIGHT = 800;
+    constexpr uint16_t LINE_THICKNESS = 2;
+    constexpr float CIRCLE_RADIUS = 5.0f;
+    float STONE_SIZE = (std::max((unsigned short)100, std::min(WIDTH, HEIGHT)) - 100) / 35.f; 
+    constexpr uint16_t  LEFT_BOARD_BUFFER = 144;
+    constexpr uint16_t RIGHT_BOARD_BUFFER = 144;
+    constexpr uint16_t    UP_BOARD_BUFFER = 44;
+    constexpr uint16_t  DOWN_BOARD_BUFFER = 44;
 
-    sf::RectangleShape b(sf::Vector2f(200, 200));
+    sf::RenderWindow window(sf::VideoMode(WIDTH, HEIGHT), "SFML works!");
+
+    sf::RectangleShape b(sf::Vector2f(WIDTH, HEIGHT));
     b.setFillColor(sf::Color(0xffdb8cff));
     b.setPosition(sf::Vector2f(0, 0));
 
     std::vector<sf::RectangleShape> lines;
-    for (int k = 0; k < 20; ++k){
-        lines.push_back(sf::RectangleShape(sf::Vector2f(180, 1)));
-        lines.back().setPosition(sf::Vector2f(10, 10 + k * 10));
+    for (int k = 0; k < 19; ++k){
+        lines.push_back(sf::RectangleShape(sf::Vector2f(WIDTH - LEFT_BOARD_BUFFER - RIGHT_BOARD_BUFFER + LINE_THICKNESS, LINE_THICKNESS)));
+        lines.back().setPosition(LEFT_BOARD_BUFFER, static_cast<int>(UP_BOARD_BUFFER + (k * (HEIGHT - UP_BOARD_BUFFER - DOWN_BOARD_BUFFER))/18));
         lines.back().setFillColor(sf::Color::Black);
     }
-    for (int k = 0; k < 20; ++k){
-        lines.push_back(sf::RectangleShape(sf::Vector2f(1, 180)));
-        lines.back().setPosition(sf::Vector2f(10 + k * 10, 10));
+    for (int k = 0; k < 19; ++k){
+        lines.push_back(sf::RectangleShape(sf::Vector2f(LINE_THICKNESS, HEIGHT - UP_BOARD_BUFFER - DOWN_BOARD_BUFFER + LINE_THICKNESS)));
+        lines.back().setPosition(static_cast<int>(LEFT_BOARD_BUFFER + (k * (WIDTH - LEFT_BOARD_BUFFER - RIGHT_BOARD_BUFFER))/18), UP_BOARD_BUFFER);
         lines.back().setFillColor(sf::Color::Black);
+    }
+    std::vector<sf::CircleShape> circles;
+    for (int k = 0; k < 9; ++k){
+        circles.push_back(sf::CircleShape(CIRCLE_RADIUS, 32));
+        circles.back().setPosition( 
+            LEFT_BOARD_BUFFER + static_cast<int>(((3 + 6*(k/3)) * (HEIGHT -   UP_BOARD_BUFFER -  DOWN_BOARD_BUFFER))/18) - CIRCLE_RADIUS + LINE_THICKNESS/2.0f,
+              UP_BOARD_BUFFER + static_cast<int>(((3 + 6*(k%3)) * (WIDTH  - LEFT_BOARD_BUFFER - RIGHT_BOARD_BUFFER))/18) - CIRCLE_RADIUS + LINE_THICKNESS/2.0f);
+        circles.back().setFillColor(sf::Color::Black);
     }
 
-    
+    std::vector<sf::CircleShape> stones;
+    for (int k = 0; k < 361; ++k){
+        stones.push_back(sf::CircleShape(19, 32));
+        stones.back().setPosition(
+            LEFT_BOARD_BUFFER + static_cast<int>(((k%19)    * (HEIGHT -   UP_BOARD_BUFFER -  DOWN_BOARD_BUFFER))/18) - 19 + LINE_THICKNESS/2.0f,
+              UP_BOARD_BUFFER + static_cast<int>(((k/19%19) * (WIDTH  - LEFT_BOARD_BUFFER - RIGHT_BOARD_BUFFER))/18) - 19 + LINE_THICKNESS/2.0f
+        );
+        stones.back().setFillColor(sf::Color(blackcolor));
+    }
 
     while (window.isOpen())
     {
@@ -157,11 +189,14 @@ int main(){
                 window.close();
         }
 
+        board_stone_color_update(B1, &stones);
+
         window.clear();
         window.draw(b);
         for (auto line : lines) window.draw(line);
+        for (auto circle : circles) window.draw(circle);
+        for (auto stone : stones) window.draw(stone);
         window.display();
     }
 }
-// g++ src/main.cc -o Go && ./Go
 // g++ -c src/main.cc && g++ main.o -o Go -lsfml-graphics -lsfml-window -lsfml-system && ./Go
