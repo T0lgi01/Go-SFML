@@ -2,6 +2,7 @@
 #include <SFML/Graphics/RectangleShape.hpp>
 #include <SFML/Graphics/Sprite.hpp>
 #include <cstdint>
+#include <iostream>
 #include <stdio.h>
 #include <stdint.h>
 #include <assert.h>
@@ -13,6 +14,7 @@ enum cellcolor{emptycolor = 0x0000000, whitecolor = 0xffffffff, blackcolor = 0x0
 // Idiom: Corrupted Cell if (cell & 252 != 0);
 
 typedef struct{
+    uint8_t current_color;
     unsigned int black_prisoners;
     unsigned int white_prisoners;
     uint8_t board[19][19];
@@ -20,16 +22,6 @@ typedef struct{
 
 bool in_bounds(uint8_t x, uint8_t y){
     return 0 <= x && x < 19 && 0 <= y && y < 19;
-}
-
-void board_reset_prisoners(Board *B){
-    B->black_prisoners = B->white_prisoners = 0;
-}
-
-void board_fill_empty(Board *B){
-    for (int k = 0; k < 361; ++k){
-        B->board[k/19%19][k%19] = empty;
-    }
 }
 
 void board_clean_flags(Board *B){ // All cells cast to .#OX
@@ -42,7 +34,7 @@ void board_print(Board *B){
     for (int k = 0; k < 361; ++k){
         printf("%c%c", ".#OX*#OX"[B->board[k/19%19][k%19] & 3 + ((k%6 == 0 && k%19%6 == 3) << 2)], " \n"[k%19 == 18]);
     }
-    printf("Prisoners. B: %i, W: %i\n", B->black_prisoners, B->white_prisoners);
+    printf("Prisoners. B: %i, W: %i\nCurrent Move: %c", B->black_prisoners, B->white_prisoners, "BW"[B->current_color == white]);
 }
 
 void board_remove_group(Board *B, uint8_t x, uint8_t y){
@@ -75,10 +67,12 @@ bool board_has_liberty(Board *B, uint8_t x, uint8_t y){
     return false;
 }
 
-bool board_play_move(Board *B, uint8_t x, uint8_t y, cellstate color){
+bool board_play_move(Board *B, uint8_t x, uint8_t y){
     // Returns whether placement was successful
-    assert(in_bounds(x, y));
+    //assert(in_bounds(x, y));
+    if (!in_bounds(x, y)) return false;
     uint8_t *current_cell = &B->board[y][x];
+    uint8_t color = B->current_color;
     if (*current_cell != empty) {
         if (*current_cell == color    ) printf("Cell of own color at %i, %i!\n", x, y);
         if (*current_cell == (color^3)) printf("Cell of other color at %i, %i!\n", x, y);
@@ -110,11 +104,16 @@ bool board_play_move(Board *B, uint8_t x, uint8_t y, cellstate color){
         board_clean_flags(B);
     }
     printf("Played Move at %i, %i.\n", x, y);
+    B->current_color ^= 3;
     return true;
 }
 
-void board_play(Board *B){
-    /// not done
+void board_setup_game(Board *B){
+    B->current_color = black;
+    B->black_prisoners = B->white_prisoners = 0;
+    for (int k = 0; k < 361; ++k){
+        B->board[k/19%19][k%19] = empty;
+    }
 }
 
 void board_stone_color_update(Board B, std::vector<sf::CircleShape> *stones){
@@ -127,18 +126,13 @@ void board_stone_color_update(Board B, std::vector<sf::CircleShape> *stones){
 
 int main(){
     Board B1;
-    board_fill_empty(&B1);
-    board_reset_prisoners(&B1);
-    B1.board[2][3] = black;
-    B1.board[5][3] = white;
-    B1.board[1][3] = black;
-    B1.board[2][7] = black;
+    board_setup_game(&B1);
 
     constexpr uint16_t WIDTH  = 1000;
     constexpr uint16_t HEIGHT = 800;
     constexpr uint16_t LINE_THICKNESS = 2;
     constexpr float CIRCLE_RADIUS = 5.0f;
-    float STONE_SIZE = (std::max((unsigned short)100, std::min(WIDTH, HEIGHT)) - 100) / 35.f; 
+    float STONE_SIZE = (std::max((unsigned short)100, std::min(WIDTH, HEIGHT)) - 100) / 36.f; 
     constexpr uint16_t  LEFT_BOARD_BUFFER = 144;
     constexpr uint16_t RIGHT_BOARD_BUFFER = 144;
     constexpr uint16_t    UP_BOARD_BUFFER = 44;
@@ -172,10 +166,10 @@ int main(){
 
     std::vector<sf::CircleShape> stones;
     for (int k = 0; k < 361; ++k){
-        stones.push_back(sf::CircleShape(19, 32));
+        stones.push_back(sf::CircleShape(STONE_SIZE, 32));
         stones.back().setPosition(
-            LEFT_BOARD_BUFFER + static_cast<int>(((k%19)    * (HEIGHT -   UP_BOARD_BUFFER -  DOWN_BOARD_BUFFER))/18) - 19 + LINE_THICKNESS/2.0f,
-              UP_BOARD_BUFFER + static_cast<int>(((k/19%19) * (WIDTH  - LEFT_BOARD_BUFFER - RIGHT_BOARD_BUFFER))/18) - 19 + LINE_THICKNESS/2.0f
+            LEFT_BOARD_BUFFER + static_cast<int>(((k%19)    * (HEIGHT -   UP_BOARD_BUFFER -  DOWN_BOARD_BUFFER))/18) - STONE_SIZE + LINE_THICKNESS/2.0f,
+              UP_BOARD_BUFFER + static_cast<int>(((k/19%19) * (WIDTH  - LEFT_BOARD_BUFFER - RIGHT_BOARD_BUFFER))/18) - STONE_SIZE + LINE_THICKNESS/2.0f
         );
         stones.back().setFillColor(sf::Color(blackcolor));
     }
@@ -187,6 +181,13 @@ int main(){
         {
             if (event.type == sf::Event::Closed)
                 window.close();
+            if (event.type == sf::Event::MouseButtonPressed){
+                sf::Vector2i position = sf::Mouse::getPosition(window);
+                int x = (position.x - LEFT_BOARD_BUFFER + STONE_SIZE) / (2*STONE_SIZE);
+                int y = (position.y -   UP_BOARD_BUFFER + STONE_SIZE) / (2*STONE_SIZE);
+                printf("px: %i, py: %i, x: %i, y: %i\n", position.x, position.x, x, y);
+                board_play_move(&B1, x, y);
+            }
         }
 
         board_stone_color_update(B1, &stones);
