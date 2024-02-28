@@ -25,18 +25,16 @@ bool in_bounds(uint8_t x, uint8_t y){
 }
 
 void board_clean_flags(Board *B){ // All cells cast to .#OX
-    uint8_t j = 0;
-    for (uint8_t i = 0; i < 19; ++i){
-        for (; j < 19; ++j){
+    for (int i = 0; i < 19; ++i){
+        for (int j = 0; j < 19; ++j){
             B->board[i][j] &= 3;
         }
     }
 }
 
 void board_print(Board *B){
-    uint8_t j = 0;
-    for (uint8_t i = 0; i < 19; ++i){
-        for (; j < 19; ++j){
+    for (int i = 0; i < 19; ++i){
+        for (int j = 0; j < 19; ++j){
             printf("%c%c", ".#OX*#OX"[B->board[i][j] & 3 + ((i%6 == 3 && j%6 == 3) << 2)], " \n"[j%19 == 18]);
         }
     }
@@ -45,9 +43,8 @@ void board_print(Board *B){
 
 void board_remove_group(Board *B, uint8_t x, uint8_t y){
     uint8_t *current_cell;
-    uint8_t j = 0;
-    for (uint8_t i = 0; i < 19; ++i){
-        for (; j < 19; ++j){
+    for (int i = 0; i < 19; ++i){
+        for (int j = 0; j < 19; ++j){
             current_cell = &B->board[i][j];
             if ((*current_cell & 4) != 0){
                 B->black_prisoners += (*current_cell & 3) == white;
@@ -120,16 +117,20 @@ bool board_play_move(Board *B, uint8_t x, uint8_t y){
 void board_setup_game(Board *B){
     B->current_color = black;
     B->black_prisoners = B->white_prisoners = 0;
-    for (int k = 0; k < 361; ++k){
-        B->board[k/19%19][k%19] = empty;
+    for (int i = 0; i < 19; ++i){
+        for (int j = 0; j < 19; ++j){
+            B->board[i][j] = empty;
+        }
     }
 }
 
 void board_stone_color_update(Board B, std::vector<sf::CircleShape> *stones){
     int color;
-    for (int k = 0; k < 361; ++k){
-        color = B.board[k/19%19][k%19];
-        (*stones)[k].setFillColor(sf::Color(color == white ? whitecolor : color == black ? blackcolor : emptycolor));
+    for (int i = 0; i < 19; ++i){
+        for (int j = 0; j < 19; ++j){
+            color = B.board[i][j];
+            (*stones)[j+19*i].setFillColor(sf::Color(color == white ? whitecolor : color == black ? blackcolor : emptycolor));
+        }
     }
 }
 
