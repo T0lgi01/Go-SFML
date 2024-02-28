@@ -25,26 +25,35 @@ bool in_bounds(uint8_t x, uint8_t y){
 }
 
 void board_clean_flags(Board *B){ // All cells cast to .#OX
-    for (int k = 0; k < 361; ++k){
-        B->board[k/19%19][k%19] &= 3;
+    uint8_t j = 0;
+    for (uint8_t i = 0; i < 19; ++i){
+        for (; j < 19; ++j){
+            B->board[i][j] &= 3;
+        }
     }
 }
 
 void board_print(Board *B){
-    for (int k = 0; k < 361; ++k){
-        printf("%c%c", ".#OX*#OX"[B->board[k/19%19][k%19] & 3 + ((k%6 == 0 && k%19%6 == 3) << 2)], " \n"[k%19 == 18]);
+    uint8_t j = 0;
+    for (uint8_t i = 0; i < 19; ++i){
+        for (; j < 19; ++j){
+            printf("%c%c", ".#OX*#OX"[B->board[i][j] & 3 + ((i%6 == 3 && j%6 == 3) << 2)], " \n"[j%19 == 18]);
+        }
     }
     printf("Prisoners. B: %i, W: %i\nCurrent Move: %c", B->black_prisoners, B->white_prisoners, "BW"[B->current_color == white]);
 }
 
 void board_remove_group(Board *B, uint8_t x, uint8_t y){
     uint8_t *current_cell;
-    for (int k = 0; k < 361; ++k){
-        current_cell = &B->board[k/19%19][k%19];
-        if ((*current_cell & 4) != 0){
-            B->black_prisoners += (*current_cell & 3) == white;
-            B->white_prisoners += (*current_cell & 3) == black;
-            *current_cell = empty;
+    uint8_t j = 0;
+    for (uint8_t i = 0; i < 19; ++i){
+        for (; j < 19; ++j){
+            current_cell = &B->board[i][j];
+            if ((*current_cell & 4) != 0){
+                B->black_prisoners += (*current_cell & 3) == white;
+                B->white_prisoners += (*current_cell & 3) == black;
+                *current_cell = empty;
+            }
         }
     }
 }
@@ -174,6 +183,17 @@ int main(){
         stones.back().setFillColor(sf::Color(blackcolor));
     }
 
+    board_stone_color_update(B1, &stones);
+
+    window.clear();
+    window.draw(b);
+    for (auto line : lines) window.draw(line);
+    for (auto circle : circles) window.draw(circle);
+    for (auto stone : stones) window.draw(stone);
+    window.display();
+
+
+
     while (window.isOpen())
     {
         sf::Event event;
@@ -187,17 +207,19 @@ int main(){
                 int y = (position.y -   UP_BOARD_BUFFER + STONE_SIZE) / (2*STONE_SIZE);
                 printf("px: %i, py: %i, x: %i, y: %i\n", position.x, position.x, x, y);
                 board_play_move(&B1, x, y);
+
+                board_stone_color_update(B1, &stones);
+
+                window.clear();
+                window.draw(b);
+                for (auto line : lines) window.draw(line);
+                for (auto circle : circles) window.draw(circle);
+                for (auto stone : stones) window.draw(stone);
+                window.display();
             }
         }
 
-        board_stone_color_update(B1, &stones);
-
-        window.clear();
-        window.draw(b);
-        for (auto line : lines) window.draw(line);
-        for (auto circle : circles) window.draw(circle);
-        for (auto stone : stones) window.draw(stone);
-        window.display();
+        
     }
 }
 // g++ -c src/main.cc && g++ main.o -o Go -lsfml-graphics -lsfml-window -lsfml-system && ./Go

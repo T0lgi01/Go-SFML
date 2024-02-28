@@ -1,0 +1,6 @@
+src/main2.cc
+callgrind.out.*
+Go_test
+Go
+*.o
+*.s
