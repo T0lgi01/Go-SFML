@@ -224,7 +224,7 @@ int main(){
     Board B1; 
     board_setup_game(&B1);
 
-    int moves[][2] = {{2, 0}, {3, 0}, {1, 0}, {2, 1}, {13, 17}, {1, 1}, {0, 0}, {0, 1}};
+    uint8_t moves[][2] = {{2, 0}, {3, 0}, {1, 0}, {2, 1}, {13, 17}, {1, 1}, {0, 0}, {0, 1}};
 
     for (auto move : moves) {
         board_play_move(&B1, move[0], move[1]);
